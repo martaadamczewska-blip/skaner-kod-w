@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skaner Porównawczy v2</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #f4f4f9; padding: 20px; color: #333; }
+        #reader { width: 100%; max-width: 500px; margin: auto; border-radius: 10px; overflow: hidden; background: white; }
+        .controls { margin: 20px 0; display: flex; justify-content: center; gap: 10px; }
+        .box { padding: 15px; margin: 10px auto; width: 85%; border-radius: 8px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #ddd; }
+        .match { background: #d4edda; color: #155724; border-color: #c3e6cb; font-weight: bold; }
+        .mismatch { background: #f8d7da; color: #721c24; border-color: #f5c6cb; font-weight: bold; }
+        button { padding: 12px 18px; cursor: pointer; border: none; border-radius: 5px; background: #007bff; color: white; font-size: 14px; transition: 0.2s; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        button:active { transform: scale(0.98); }
+        h2 { margin-bottom: 5px; }
+        p { font-size: 0.9em; color: #666; }
+    </style>
+</head>
+<body>
+
+    <h2>🔍 Skaner Porównawczy</h2>
+    <p>Reguła: Kropka ( . ) jest traktowana jak Myślnik ( - )</p>
+
+    <div id="reader"></div>
+
+    <div class="controls">
+        <button id="btnA" onclick="setMode('A')">Skanuj Wzorzec (A)</button>
+        <button id="btnB" onclick="setMode('B')">Skanuj Produkt (B)</button>
+    </div>
+
+    <div class="box">
+        <div>Wzorzec A: <strong id="valA">---</strong></div>
+        <div style="margin-top: 10px;">Produkt B: <strong id="valB">---</strong></div>
+    </div>
+
+    <div id="result" class="box">
+        Status: Czekam na skanowanie...
+    </div>
+
+    <button style="background: #6c757d; margin-top: 20px;" onclick="reset()">Resetuj</button>
+
+    <script>
+        let codeA = "";
+        let codeB = "";
+        let currentMode = "A";
+        const html5QrCode = new Html5Qrcode("reader");
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btnA').disabled = (mode === 'A');
+            document.getElementById('btnB').disabled = (mode === 'B');
+            startScanner();
+        }
+
+        function onScanSuccess(decodedText) {
+            if (currentMode === "A") {
+                codeA = decodedText;
+                document.getElementById("valA").innerText = codeA;
+                stopScanner();
+                // Po udanym skanie wzorca, dajemy chwilę i przełączamy na tryb B
+                setTimeout(() => setMode('B'), 500);
+            } else {
+                codeB = decodedText;
+                document.getElementById("valB").innerText = codeB;
+                compareCodes();
+                stopScanner();
+            }
+        }
+
+        function compareCodes() {
+            const resDiv = document.getElementById("result");
+            
+            // NORMALIZACJA: zamiana kropek na myślniki i usunięcie zbędnych spacji
+            const normA = codeA.replace(/\./g, '-').trim();
+            const normB = codeB.replace(/\./g, '-').trim();
+
+            if (normA === normB) {
+                resDiv.innerText = "ZGODNE ✅";
+                resDiv.className = "box match";
+            } else {
+                resDiv.innerText = "NIEZGODNE ❌";
+                resDiv.className = "box mismatch";
+            }
+        }
+
+        function startScanner() {
+            const config = { fps: 15, qrbox: { width: 250, height: 150 } };
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                .catch(err => console.error("Błąd kamery:", err));
+        }
+
+        function stopScanner() {
+            html5QrCode.stop().catch(err => console.warn("Skaner już zatrzymany."));
+        }
+
+        function reset() {
+            codeA = ""; codeB = "";
+            document.getElementById("valA").innerText = "---";
+            document.getElementById("valB").innerText = "---";
+            document.getElementById("result").innerText = "Status: Czekam na skanowanie...";
+            document.getElementById("result").className = "box";
+            stopScanner();
+            setMode('A');
+        }
+
+        // Start aplikacji w trybie wzorca
+        setMode('A');
+    </script>
+</body>
+</html>
