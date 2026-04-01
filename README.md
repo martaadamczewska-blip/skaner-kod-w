@@ -1,0 +1,1 @@
+# skaner-kod-w
